@@ -1,24 +1,35 @@
-# 📦 SamvaadGPT - Direct Online Processing (No Downloads)
+# 📦 SamvaadGPT - Streamlit Cloud Compatible Version
 # 🏩 Institution: Indian Institute of Technology Delhi
 # 🧠 Project: Stream-based Document Processing from Google Drive
 
 import os
 import io
 import requests
-import fitz  # PyMuPDF
 import streamlit as st
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 import openai
 import hashlib
 import pickle
-from PIL import Image
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 import logging
 from datetime import datetime
 import json
 import re
+
+# Try to import PDF processing libraries (fallback if not available)
+try:
+    import pypdf2 as PyPDF2
+    PDF_READER = "pypdf2"
+except ImportError:
+    try:
+        import PyPDF2
+        PDF_READER = "PyPDF2"
+    except ImportError:
+        try:
+            import pdfplumber
+            PDF_READER = "pdfplumber"
+        except ImportError:
+            PDF_READER = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +74,33 @@ def extract_file_id(gdrive_url):
 def get_direct_download_url(file_id):
     """Convert file ID to direct download URL"""
     return f"https://drive.google.com/uc?export=download&id={file_id}"
+
+def extract_text_from_pdf_pypdf2(pdf_content):
+    """Extract text using PyPDF2"""
+    try:
+        pdf_reader = PyPDF2.PdfReader(pdf_content)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+    except Exception as e:
+        logger.error(f"PyPDF2 extraction failed: {e}")
+        return ""
+
+def extract_text_from_pdf_pdfplumber(pdf_content):
+    """Extract text using pdfplumber"""
+    try:
+        import pdfplumber
+        with pdfplumber.open(pdf_content) as pdf:
+            text = ""
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        return text
+    except Exception as e:
+        logger.error(f"pdfplumber extraction failed: {e}")
+        return ""
 
 def stream_pdf_from_url(url, progress_callback=None):
     """Stream PDF directly from URL and extract text without downloading"""
@@ -149,54 +187,29 @@ def handle_large_file_download(url, headers, progress_callback):
         raise Exception(f"Failed to access large file: {str(e)}")
 
 def extract_text_from_pdf_stream(pdf_stream, progress_callback=None):
-    """Extract text from PDF stream using PyMuPDF and OCR"""
+    """Extract text from PDF stream using available PDF library"""
     try:
         if progress_callback:
             progress_callback("📖 Opening PDF document...")
         
-        # Open PDF from memory stream
-        doc = fitz.open(stream=pdf_stream.read(), filetype="pdf")
-        full_text = ""
-        total_pages = len(doc)
+        if not PDF_READER:
+            raise Exception("No PDF processing library available. Please install PyPDF2 or pdfplumber.")
         
         if progress_callback:
-            progress_callback(f"📄 Processing {total_pages} pages...")
+            progress_callback(f"📄 Processing PDF with {PDF_READER}...")
         
-        for page_num in range(total_pages):
-            page = doc[page_num]
-            
-            if progress_callback and page_num % 5 == 0:  # Update every 5 pages
-                progress_callback(f"📖 Processing page {page_num + 1}/{total_pages}")
-            
-            # First try to extract text directly
-            page_text = page.get_text()
-            
-            # If no text or very little text, use OCR
-            if len(page_text.strip()) < 50:
-                try:
-                    # Higher resolution for better OCR
-                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                    img_bytes = pix.tobytes("png")
-                    img = Image.open(io.BytesIO(img_bytes))
-                    
-                    # OCR with optimized settings
-                    ocr_text = pytesseract.image_to_string(
-                        img, 
-                        config='--psm 6 -l eng --oem 3'
-                    )
-                    page_text = ocr_text
-                except Exception as ocr_error:
-                    logger.warning(f"OCR failed for page {page_num}: {ocr_error}")
-                    page_text = ""  # Fallback to empty if OCR fails
-            
-            full_text += page_text + "\n\n"
-        
-        doc.close()
+        # Try different PDF readers
+        if PDF_READER in ["pypdf2", "PyPDF2"]:
+            text = extract_text_from_pdf_pypdf2(pdf_stream)
+        elif PDF_READER == "pdfplumber":
+            text = extract_text_from_pdf_pdfplumber(pdf_stream)
+        else:
+            raise Exception("No supported PDF reader available")
         
         if progress_callback:
             progress_callback("✅ Text extraction completed!")
         
-        return full_text.strip()
+        return text.strip()
         
     except Exception as e:
         logger.error(f"Error extracting text from PDF stream: {e}")
@@ -226,7 +239,7 @@ def process_multiple_files(file_urls, progress_callback=None):
     
     return all_text, successful_files
 
-# --- Caching and Vector DB Functions (same as before) ---
+# --- Caching and Vector DB Functions ---
 def setup_cache_dir():
     """Create cache directory if it doesn't exist"""
     if not os.path.exists(Config.CACHE_DIR):
@@ -389,7 +402,7 @@ Answer:"""
 # --- Streamlit Interface ---
 def main():
     st.set_page_config(
-        page_title="SamvaadGPT - IIT Delhi (Online Processing)",
+        page_title="SamvaadGPT - IIT Delhi (Streamlit Cloud)",
         page_icon="🌐",
         layout="wide"
     )
@@ -408,13 +421,21 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    st.markdown('<h1 class="main-header">🌐 SamvaadGPT | Direct Online Processing</h1>', unsafe_allow_html=True)
-    st.markdown('<div style="text-align: center;"><span class="online-badge">📡 NO DOWNLOADS • STREAM DIRECTLY FROM GOOGLE DRIVE</span></div>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🌐 SamvaadGPT | Streamlit Cloud Edition</h1>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center;"><span class="online-badge">📡 STREAMLIT CLOUD COMPATIBLE • NO DOWNLOADS</span></div>', unsafe_allow_html=True)
+    
+    # Show PDF reader status
+    if PDF_READER:
+        st.success(f"✅ PDF Reader: {PDF_READER} available")
+    else:
+        st.error("❌ No PDF reader available. Please add PyPDF2 or pdfplumber to requirements.txt")
+        return
+    
     st.markdown("---")
     
     # Sidebar
     with st.sidebar:
-        st.header("🌐 Online Configuration")
+        st.header("🌐 Configuration")
         
         # Input methods
         input_method = st.radio(
@@ -460,7 +481,6 @@ def main():
             st.session_state.stats = {
                 'files_processed': 0,
                 'questions_answered': 0,
-                'bytes_processed': 0
             }
         
         stats = st.session_state.stats
@@ -468,9 +488,6 @@ def main():
         st.metric("Questions Answered", stats['questions_answered'])
         
         if st.button("🗑️ Clear Cache & Reset"):
-            if os.path.exists(Config.CACHE_DIR):
-                import shutil
-                shutil.rmtree(Config.CACHE_DIR)
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
@@ -486,7 +503,7 @@ def main():
     
     # Process files if not already done
     if 'vector_db' not in st.session_state or st.session_state.get('processed_urls') != file_urls:
-        st.info("🌐 Processing documents directly from Google Drive (no downloads)...")
+        st.info("🌐 Processing documents directly from Google Drive...")
         
         progress_container = st.container()
         with progress_container:
@@ -534,7 +551,7 @@ def main():
                 update_progress("✅ Ready to answer questions!", 100)
                 progress_container.empty()
                 
-                st.success(f"🌐 Successfully processed {successful_files} files directly from Google Drive!")
+                st.success(f"🌐 Successfully processed {successful_files} files!")
                 
             except Exception as e:
                 st.error(f"❌ Error processing files: {str(e)}")
@@ -550,7 +567,7 @@ def main():
     )
     
     if query:
-        with st.spinner("🧠 Generating answer from online documents..."):
+        with st.spinner("🧠 Generating answer..."):
             try:
                 nn_model, chunks, vectorizer = st.session_state.vector_db
                 context = get_relevant_context(nn_model, chunks, vectorizer, query)
@@ -576,8 +593,8 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown(
-        "**🌐 SamvaadGPT Online** - No downloads required! | "
-        "Streams directly from Google Drive | Developed for IIT Delhi"
+        "**🌐 SamvaadGPT Streamlit Cloud Edition** | "
+        f"PDF Reader: {PDF_READER} | Developed for IIT Delhi"
     )
 
 if __name__ == "__main__":
