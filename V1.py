@@ -1,81 +1,50 @@
-# SamvaadGPT Minimal Upload Version - IIT Delhi Memory Bot
-
-import os
-import io
-import fitz  # PyMuPDF
-import streamlit as st
-import pytesseract
-import openai
+# app.py
+import os, io, gdown, fitz, streamlit as st, pytesseract, mimetypes, openai
 from PIL import Image
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 
-# Set OpenAI Key
-openai.api_key = st.sidebar.text_input("🔑 Enter OpenAI API Key", type="password")
+# Hardcoded Google Drive folder
+GDRIVE_FOLDER = "https://drive.google.com/drive/folders/1cAy-I4nOzFQtw_KuudeB4Xe8AxIHlzjg"
 
-# Page Title
-st.set_page_config(page_title="SamvaadGPT - Institutional Memory")
-st.title("🧠 SamvaadGPT | Institutional Memory Bot")
+st.set_page_config(page_title="SamvaadGPT - IIT Delhi", layout="wide")
+st.title("🧠 SamvaadGPT | IIT Delhi Institutional Memory Assistant")
 
-# Upload Interface
-uploaded_files = st.file_uploader("📂 Upload PDFs related to IIT Delhi Committees or CSR", type="pdf", accept_multiple_files=True)
-
-# Store all text and metadata
-document_chunks = []
-metadata = []
-
-# Extract text from PDFs
-def extract_text_with_source(file):
-    doc = fitz.open(stream=file.read(), filetype="pdf")
-    combined_text = ""
-    for i, page in enumerate(doc):
-        try:
-            text = page.get_text().strip()
-            if not text:
-                pix = page.get_pixmap()
-                img = Image.open(io.BytesIO(pix.tobytes("png")))
-                text = pytesseract.image_to_string(img, config='--psm 6')
-        except:
-            text = ""
-        combined_text += f"[Page {i+1}]: {text}\n"
-    return combined_text
-
-# Process uploaded files
-if uploaded_files and openai.api_key:
-    with st.spinner("🔍 Reading and indexing your documents..."):
-        for file in uploaded_files:
-            text = extract_text_with_source(file)
-            for i in range(0, len(text), 800):
-                chunk = text[i:i+800]
-                document_chunks.append(chunk)
-                metadata.append(file.name)
-
-        vectorizer = TfidfVectorizer()
-        X = vectorizer.fit_transform(document_chunks)
-        model = NearestNeighbors(n_neighbors=3, metric="cosine").fit(X)
-
-        st.success("✅ Files indexed. Ask your question below.")
-        query = st.text_input("💬 Ask a question")
-
-        if query:
-            with st.spinner("🤖 Thinking..."):
-                q_vec = vectorizer.transform([query])
-                distances, indices = model.kneighbors(q_vec)
-                sources = []
-                context = ""
-                for idx in indices[0]:
-                    context += f"\n--- From {metadata[idx]} ---\n{document_chunks[idx]}"
-                    sources.append(metadata[idx])
-
-                prompt = f"Answer the following question using only the provided context:\n{context}\n\nQuestion: {query}\nAnswer:"
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                answer = response["choices"][0]["message"]["content"]
-                st.markdown(f"**🧾 Answer:** {answer}")
-                st.markdown(f"📌 **Sources Cited:** `{', '.join(set(sources))}`")
-
-elif not openai.api_key:
-    st.warning("🔐 Please enter your OpenAI API Key in the sidebar.")
-
+openai.api_key = st.sidebar.text_input("🔑 OpenAI API Key", type="password")
+if openai.api_key:
+    with st.spinner("📥 Downloading and Processing Files..."):
+        def extract_file_id(url):
+            if "id=" in url: return url.split("id=")[1].split("&")[0]
+            if "/d/" in url: return url.split("/d/")[1].split("/")[0]
+            if "folders/" in url: return url.split("folders/")[1].split("/")[0]
+        fid = extract_file_id(GDRIVE_FOLDER)
+        files = gdown.download_folder(id=fid, quiet=True, use_cookies=False)
+        if not files:
+            st.error("❌ No PDF files downloaded.")
+        else:
+            all_text = ""
+            for f in files:
+                if mimetypes.guess_type(f)[0] == 'application/pdf':
+                    doc = fitz.open(f)
+                    for p in doc:
+                        pix = p.get_pixmap()
+                        img = Image.open(io.BytesIO(pix.tobytes("png")))
+                        all_text += pytesseract.image_to_string(img, config='--psm 6') + "\n"
+            if not all_text:
+                st.warning("⚠️ No text extracted.")
+            else:
+                vec = TfidfVectorizer().fit_transform([all_text[i:i+500] for i in range(0, len(all_text), 500)])
+                model = NearestNeighbors(n_neighbors=3, metric="cosine").fit(vec)
+                query = st.text_input("💬 Ask a question about these documents")
+                if query:
+                    qv = TfidfVectorizer().fit([all_text]).transform([query])
+                    d, idx = model.kneighbors(qv)
+                    context = all_text[idx[0][0]*500:(idx[0][0]+1)*500]
+                    resp = openai.ChatCompletion.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role":"user", "content":
+                            f"Context:\n{context}\n\nQuestion: {query}\nAnswer:"}]
+                    )
+                    st.markdown("**🧾 Answer:** " + resp['choices'][0]['message']['content'])
+else:
+    st.info("🔑 Please enter your OpenAI API Key above.")
