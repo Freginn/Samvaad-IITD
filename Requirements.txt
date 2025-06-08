@@ -2,6 +2,6 @@ streamlit
 openai
 pytesseract
 pillow
-scikit-learn
 PyMuPDF==1.22.5
 gdown
+scikit-learn
