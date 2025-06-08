@@ -4,4 +4,4 @@ pytesseract
 pillow
 PyMuPDF==1.22.5
 gdown
-scikit-learn
+scikit-learn==1.3.2
