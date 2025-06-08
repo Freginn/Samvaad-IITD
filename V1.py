@@ -6,7 +6,7 @@ import os
 import io
 import requests
 import streamlit as st
-import openai
+from openai import OpenAI  # Updated import for OpenAI v1.x+
 import hashlib
 import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -365,9 +365,10 @@ def get_relevant_context(nn_model, chunks, vectorizer, query, max_chunks=5):
         return ""
 
 def generate_answer(context, query, api_key):
-    """Generate answer using OpenAI API"""
+    """Generate answer using OpenAI API (Updated for v1.x+)"""
     try:
-        openai.api_key = api_key
+        # Initialize OpenAI client with API key
+        client = OpenAI(api_key=api_key)
         
         prompt = f"""Based on the provided context from IIT Delhi documents, please answer the question accurately and concisely.
 
@@ -384,7 +385,8 @@ Instructions:
 
 Answer:"""
 
-        response = openai.ChatCompletion.create(
+        # Updated API call for OpenAI v1.x+
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant specialized in answering questions about IIT Delhi institutional documents. Provide accurate, helpful responses based on the given context."},
@@ -394,7 +396,7 @@ Answer:"""
             temperature=0.1
         )
         
-        return response["choices"][0]["message"]["content"].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Error generating answer: {e}")
         return f"Error generating response: {str(e)}"
