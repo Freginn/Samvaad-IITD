@@ -1,7 +1,7 @@
 streamlit
-gdown
 pymupdf==1.22.5
 pytesseract
 openai
-pillow
+gdown
 scikit-learn
+Pillow
