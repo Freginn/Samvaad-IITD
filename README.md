@@ -9,5 +9,6 @@ A Streamlit app to query embedded documents (PDFs) using GPT-3.5.
    git clone https://github.com/your-username/SamvaadGPT-IITD.git
    cd SamvaadGPT-IITD
 2. Install dependencies
+   ```bash
    pip install -r requirements.txt
 
