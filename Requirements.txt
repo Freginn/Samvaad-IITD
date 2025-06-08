@@ -1,0 +1,7 @@
+streamlit
+pymupdf==1.22.5
+pytesseract
+openai
+pillow
+scikit-learn
+gdown
