@@ -6,7 +6,6 @@ import os
 import io
 import requests
 import streamlit as st
-from openai import OpenAI  # Updated import for OpenAI v1.x+
 import hashlib
 import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -15,6 +14,20 @@ import logging
 from datetime import datetime
 import json
 import re
+
+# Try to import OpenAI with fallback handling
+try:
+    from openai import OpenAI
+    OPENAI_VERSION = "v1"
+    OPENAI_AVAILABLE = True
+except ImportError:
+    try:
+        import openai
+        OPENAI_VERSION = "v0"
+        OPENAI_AVAILABLE = True
+    except ImportError:
+        OPENAI_AVAILABLE = False
+        st.error("❌ OpenAI library not found. Please add 'openai' to your requirements.txt file.")
 
 # Try to import PDF processing libraries (fallback if not available)
 try:
@@ -365,12 +378,16 @@ def get_relevant_context(nn_model, chunks, vectorizer, query, max_chunks=5):
         return ""
 
 def generate_answer(context, query, api_key):
-    """Generate answer using OpenAI API (Updated for v1.x+)"""
+    """Generate answer using OpenAI API (Compatible with both v0.x and v1.x+)"""
     try:
-        # Initialize OpenAI client with API key
-        client = OpenAI(api_key=api_key)
+        if not OPENAI_AVAILABLE:
+            return "❌ OpenAI library is not available. Please install it using: pip install openai"
         
-        prompt = f"""Based on the provided context from IIT Delhi documents, please answer the question accurately and concisely.
+        if OPENAI_VERSION == "v1":
+            # OpenAI v1.x+ syntax
+            client = OpenAI(api_key=api_key)
+            
+            prompt = f"""Based on the provided context from IIT Delhi documents, please answer the question accurately and concisely.
 
 Context:
 {context}
@@ -385,21 +402,52 @@ Instructions:
 
 Answer:"""
 
-        # Updated API call for OpenAI v1.x+
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant specialized in answering questions about IIT Delhi institutional documents. Provide accurate, helpful responses based on the given context."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500,
-            temperature=0.1
-        )
-        
-        return response.choices[0].message.content.strip()
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant specialized in answering questions about IIT Delhi institutional documents. Provide accurate, helpful responses based on the given context."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.1
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        else:
+            # OpenAI v0.x syntax (legacy)
+            openai.api_key = api_key
+            
+            prompt = f"""Based on the provided context from IIT Delhi documents, please answer the question accurately and concisely.
+
+Context:
+{context}
+
+Question: {query}
+
+Instructions:
+- Provide a clear, direct answer based on the context
+- If the context doesn't contain enough information, clearly state this
+- Include specific details when available
+- Keep the response focused and relevant
+
+Answer:"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant specialized in answering questions about IIT Delhi institutional documents. Provide accurate, helpful responses based on the given context."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,
+                temperature=0.1
+            )
+            
+            return response["choices"][0]["message"]["content"].strip()
+            
     except Exception as e:
         logger.error(f"Error generating answer: {e}")
-        return f"Error generating response: {str(e)}"
+        return f"Error generating response: {str(e)}. Please check your OpenAI API key and try again."
 
 # --- Streamlit Interface ---
 def main():
@@ -426,12 +474,19 @@ def main():
     st.markdown('<h1 class="main-header">🌐 SamvaadGPT | Streamlit Cloud Edition</h1>', unsafe_allow_html=True)
     st.markdown('<div style="text-align: center;"><span class="online-badge">📡 STREAMLIT CLOUD COMPATIBLE • NO DOWNLOADS</span></div>', unsafe_allow_html=True)
     
+    # Show OpenAI library status
+    if OPENAI_AVAILABLE:
+        st.success(f"✅ OpenAI Library: {OPENAI_VERSION} available")
+    else:
+        st.error("❌ OpenAI library not available. Please add 'openai>=1.0.0' to requirements.txt")
+        st.stop()
+    
     # Show PDF reader status
     if PDF_READER:
         st.success(f"✅ PDF Reader: {PDF_READER} available")
     else:
         st.error("❌ No PDF reader available. Please add PyPDF2 or pdfplumber to requirements.txt")
-        return
+        st.stop()
     
     st.markdown("---")
     
