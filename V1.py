@@ -1,5 +1,5 @@
 # 📦 SamvaadGPT Prototype Guide (Streamlit Web App + Google Drive Integration)
-# 🏛️ Institution: Indian Institute of Technology Delhi
+# 🏩 Institution: Indian Institute of Technology Delhi
 # 🧠 Project: SamvaadGPT - Institutional Memory Assistant (Web App)
 
 # 1. Install Required Packages (Run this locally)
@@ -68,7 +68,7 @@ def answer_query(nn_model, chunks, vectorizer, query):
     distances, indices = nn_model.kneighbors(query_vec)
     context = "\n".join([chunks[i] for i in indices[0]])
     prompt = f"Use the following context to answer the question:\n{context}\n\nQuestion: {query}\nAnswer:"
-    
+
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
@@ -81,10 +81,11 @@ st.title("🧠 SamvaadGPT | IIT Delhi Institutional Memory Assistant")
 
 with st.sidebar:
     st.header("📂 Upload Source")
-    gdrive_url = st.text_input("🔗 Google Drive Link (file or folder)")
+    # Pre-defined link instead of user input
+    gdrive_url = "https://drive.google.com/drive/folders/1cAy-I4nOzFQtw_KuudeB4Xe8AxIHlzjg"
     openai.api_key = st.text_input("🔑 OpenAI API Key", type="password")
 
-if gdrive_url and openai.api_key:
+if openai.api_key:
     with st.spinner("📥 Downloading and Processing Files..."):
         files = download_from_gdrive(gdrive_url)
         if not files:
@@ -105,4 +106,4 @@ if gdrive_url and openai.api_key:
                         response = answer_query(nn_model, chunks, vectorizer, query)
                         st.markdown(f"**🧾 Answer:** {response}")
 else:
-    st.info("Please provide a valid Google Drive link and OpenAI key to continue.")
+    st.info("Please provide your OpenAI key to continue.")
