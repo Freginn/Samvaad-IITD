@@ -1,0 +1,6 @@
+streamlit>=1.35
+pandas
+PyYAML>=6
+mcp>=1.9        # only needed for the Swiggy/Zomato MCP connectors
+httpx
+pytest

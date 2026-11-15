@@ -1,0 +1,22 @@
+# Payment methods YOU own. Base reward rates apply on top of checkout offers.
+# ILLUSTRATIVE — card reward structures change; check your card's current T&C.
+# reward_rates: platform -> % back; "*" = default for other platforms.
+
+payment_methods:
+  - id: swiggy_hdfc
+    name: Swiggy HDFC
+    reward_rates: {instamart: 10, swiggy_food: 10, dineout: 10, "*": 1}
+    reward_cap_per_txn: 150     # real card caps monthly; per-order cap approximates it
+  - id: sbi_cashback
+    name: SBI Cashback
+    reward_rates: {"*": 5}
+    reward_cap_per_txn: 100
+  - id: amazon_pay_icici
+    name: Amazon Pay ICICI
+    reward_rates: {amazon_now: 5, "*": 1}
+  - id: flipkart_axis
+    name: Flipkart Axis
+    reward_rates: {flipkart_minutes: 5, "*": 1}
+  - id: upi
+    name: UPI
+    reward_rates: {}
