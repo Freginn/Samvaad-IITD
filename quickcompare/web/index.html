@@ -1,0 +1,475 @@
+<title>QuickCompare</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: working bench. Left = basket & price grid you edit; right = live verdict column. Settings in tabs below. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --sunk:#e9ece7; --line:#d5dbd3;
+  --fg:#17211c; --muted:#5d6b63;
+  --accent:#0f6b4f; --accent-fg:#ffffff; --accent-soft:#dcefe6;
+  --saffron:#c26a00; --saffron-soft:#fbead2;
+  --bad:#b3261e; --bad-soft:#f9dedb;
+  --display:"Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111613; --surface:#181f1b; --sunk:#202923; --line:#2f3a33;
+  --fg:#e7eee9; --muted:#9aa9a0;
+  --accent:#4fc497; --accent-fg:#06281c; --accent-soft:#173a2c;
+  --saffron:#f0a23c; --saffron-soft:#3a2a12;
+  --bad:#f08b83; --bad-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --surface:#181f1b; --sunk:#202923; --line:#2f3a33;
+  --fg:#e7eee9; --muted:#9aa9a0;
+  --accent:#4fc497; --accent-fg:#06281c; --accent-soft:#173a2c;
+  --saffron:#f0a23c; --saffron-soft:#3a2a12;
+  --bad:#f08b83; --bad-soft:#3d1c1a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:18px}
+h1{font:800 30px/1.1 var(--display);letter-spacing:-.02em;margin:0}
+h1 span{color:var(--accent)}
+header p{margin:0;color:var(--muted);max-width:62ch}
+h2{font:600 17px/1.2 var(--display);margin:0;text-wrap:balance}
+.label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+.scroll{overflow-x:auto;min-width:0}
+table{border-collapse:collapse;width:100%}
+th,td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px;min-width:0}
+input[type=number]{width:74px;text-align:right}
+input.name{width:100%;min-width:170px}
+input.price.best{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-weight:500;cursor:pointer;border-radius:7px;padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:4px 6px}
+button.ghost:hover{color:var(--bad)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;user-select:none;background:var(--surface)}
+.chip input{margin:0;accent-color:var(--accent)}
+.chip:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.verdict{background:var(--accent);color:var(--accent-fg);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px}
+.verdict .big{font:800 40px/1 var(--display);letter-spacing:-.02em}
+.verdict .sub{opacity:.9}
+.split{border:1px dashed var(--saffron);background:var(--saffron-soft);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:4px}
+.split b{color:var(--saffron)}
+details.opt{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.opt[open]{border-color:var(--accent)}
+details.opt summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 10px}
+details.opt summary::-webkit-details-marker{display:none}
+.rank{font:600 12px var(--display);color:var(--muted)}
+.opt .who{min-width:0}
+.opt .who b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opt .who small{color:var(--muted)}
+.opt .eff{text-align:right;font-weight:600;font-size:16px}
+.opt .eff small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.bd{padding:4px 12px 12px 42px;display:flex;flex-direction:column;gap:3px}
+.bd .ln{display:flex;justify-content:space-between;gap:12px}
+.bd .save{color:var(--accent)}
+.bd .cb{color:var(--saffron)}
+.bd .tot{border-top:1px solid var(--line);padding-top:4px;font-weight:600}
+.miss{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--bad-soft);color:var(--bad);margin-left:6px}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.links a{color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:13px}
+.links a:hover{border-color:var(--accent)}
+.note{color:var(--muted);font-size:13px;margin:0}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);padding:8px 12px;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.settings{margin-top:20px}
+textarea{width:100%;min-height:90px;font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.empty{color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:8px}
+@media (prefers-reduced-motion:no-preference){details.opt{transition:border-color .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Quick<span>Compare</span></h1>
+    <p>Put in your basket and the prices each app shows. It applies fees, coupons, card offers, cashback and card rewards, then tells you where and how to pay. Starter prices and offers are examples, so change them to what you see today.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="bh">
+      <div class="row spread"><h2 id="bh">Basket and prices</h2>
+        <div class="row"><button id="addItem">Add item</button></div></div>
+      <div class="row" id="appChips" aria-label="Apps to compare"></div>
+      <div class="scroll"><table id="priceTable"></table></div>
+      <p class="note">Price per unit in ₹. Leave a cell blank if that app doesn't have it. The cheapest price for each item is highlighted.</p>
+      <div class="row spread">
+        <div class="row" id="memChips" aria-label="Memberships"></div>
+        <label class="row" for="maxEta"><span class="label">Max wait</span>
+          <input type="number" id="maxEta" min="5" max="120" step="5"> min</label>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="rh" aria-live="polite">
+      <div class="row spread"><h2 id="rh">Cheapest way to buy</h2>
+        <label class="chip" for="bestOnly"><input type="checkbox" id="bestOnly" checked> Best card per app</label></div>
+      <div id="results"></div>
+    </section>
+  </div>
+
+  <section class="panel settings" aria-label="Settings">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="cards" aria-selected="true">My cards</button>
+      <button role="tab" data-tab="offers" aria-selected="false">Offers</button>
+      <button role="tab" data-tab="fees" aria-selected="false">App fees</button>
+      <button role="tab" data-tab="data" aria-selected="false">Backup</button>
+    </div>
+    <div id="tab-cards" class="tabpane"></div>
+    <div id="tab-offers" class="tabpane" hidden></div>
+    <div id="tab-fees" class="tabpane" hidden></div>
+    <div id="tab-data" class="tabpane" hidden>
+      <p class="note">Your settings stay in this browser only. To move them to another device, copy this text and paste it there.</p>
+      <textarea id="dump" aria-label="Settings as text"></textarea>
+      <div class="row"><button id="copyDump">Copy</button><button id="loadDump">Load pasted settings</button><button id="reset">Reset to examples</button><span id="dumpMsg" class="note"></span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SAMPLE = {
+  maxEta: 30, bestOnly: true,
+  memberships: { swiggy_one:false, zepto_pass:false, prime:false, zomato_gold:false },
+  apps: [
+    {id:"blinkit",label:"Blinkit",on:true,eta:10,link:"https://blinkit.com/s/?q={q}",fees:{delivery:30,freeAbove:199,handling:9,platform:0,small:20,smallBelow:99,mem:""}},
+    {id:"zepto",label:"Zepto",on:true,eta:10,link:"https://www.zeptonow.com/search?query={q}",fees:{delivery:30,freeAbove:199,handling:12,platform:0,small:25,smallBelow:99,mem:"zepto_pass"}},
+    {id:"instamart",label:"Instamart",on:true,eta:15,link:"https://www.swiggy.com/instamart/search?query={q}",fees:{delivery:30,freeAbove:199,handling:10,platform:0,small:30,smallBelow:99,mem:"swiggy_one"}},
+    {id:"amazon_now",label:"Amazon Now",on:true,eta:15,link:"https://www.amazon.in/s?k={q}",fees:{delivery:25,freeAbove:149,handling:0,platform:0,small:0,smallBelow:0,mem:"prime"}},
+    {id:"flipkart_minutes",label:"Flipkart Minutes",on:true,eta:12,link:"https://www.flipkart.com/search?q={q}",fees:{delivery:25,freeAbove:99,handling:9,platform:0,small:0,smallBelow:0,mem:""}},
+    {id:"bigbasket",label:"BigBasket",on:true,eta:20,link:"https://www.bigbasket.com/ps/?q={q}",fees:{delivery:30,freeAbove:199,handling:5,platform:0,small:0,smallBelow:0,mem:""}},
+    {id:"swiggy_food",label:"Swiggy Food",on:false,eta:35,link:"https://www.swiggy.com/search?query={q}",fees:{delivery:40,freeAbove:0,handling:0,platform:10,small:0,smallBelow:0,mem:"swiggy_one"}},
+    {id:"zomato",label:"Zomato",on:false,eta:35,link:"https://www.zomato.com/search?q={q}",fees:{delivery:40,freeAbove:0,handling:0,platform:12,small:0,smallBelow:0,mem:"zomato_gold"}}
+  ],
+  items: [
+    {name:"Amul Taaza Milk 1L",qty:2,prices:{blinkit:74,zepto:75,instamart:74,amazon_now:73,flipkart_minutes:76,bigbasket:74}},
+    {name:"Britannia Brown Bread",qty:1,prices:{blinkit:55,zepto:50,instamart:52,amazon_now:55,flipkart_minutes:53,bigbasket:49}},
+    {name:"Eggs (12 pack)",qty:1,prices:{blinkit:96,zepto:99,instamart:92,amazon_now:105,bigbasket:90}},
+    {name:"Maggi Masala 4-pack",qty:1,prices:{blinkit:62,zepto:60,instamart:64,amazon_now:58,flipkart_minutes:60,bigbasket:62}},
+    {name:"Banana (6 pcs)",qty:1,prices:{blinkit:48,zepto:45,instamart:52,amazon_now:50,flipkart_minutes:44,bigbasket:42}},
+    {name:"Aashirvaad Atta 5kg",qty:1,prices:{blinkit:265,zepto:270,instamart:259,amazon_now:249,flipkart_minutes:262,bigbasket:255}}
+  ],
+  cards: [
+    {id:"swiggy_hdfc",name:"Swiggy HDFC",own:true,base:1,cap:150,rates:{instamart:10,swiggy_food:10}},
+    {id:"sbi",name:"SBI Cashback",own:true,base:5,cap:100,rates:{}},
+    {id:"amazon_icici",name:"Amazon Pay ICICI",own:true,base:1,cap:0,rates:{amazon_now:5}},
+    {id:"flipkart_axis",name:"Flipkart Axis",own:false,base:1,cap:0,rates:{flipkart_minutes:5}},
+    {id:"upi",name:"UPI",own:true,base:0,cap:0,rates:{}}
+  ],
+  offers: [
+    {on:true,desc:"₹50 cashback on 6+ items",app:"amazon_now",card:"",type:"flat",value:50,max:0,minOrder:0,minItems:6,real:"cashback",group:"coupon"},
+    {on:true,desc:"5% off with Swiggy HDFC",app:"amazon_now",card:"swiggy_hdfc",type:"pct",value:5,max:100,minOrder:0,minItems:0,real:"instant",group:"bank"},
+    {on:true,desc:"10% off with HDFC cards",app:"instamart",card:"swiggy_hdfc",type:"pct",value:10,max:150,minOrder:299,minItems:0,real:"instant",group:"bank"},
+    {on:true,desc:"₹75 off above ₹599",app:"blinkit",card:"",type:"flat",value:75,max:0,minOrder:599,minItems:0,real:"instant",group:"coupon"},
+    {on:true,desc:"10% off with SBI card",app:"zepto",card:"sbi",type:"pct",value:10,max:100,minOrder:399,minItems:0,real:"instant",group:"bank"},
+    {on:true,desc:"5% off with Flipkart Axis",app:"flipkart_minutes",card:"flipkart_axis",type:"pct",value:5,max:75,minOrder:0,minItems:0,real:"instant",group:"bank"},
+    {on:true,desc:"₹25 cashback on UPI",app:"bigbasket",card:"upi",type:"flat",value:25,max:0,minOrder:249,minItems:0,real:"cashback",group:"bank"}
+  ]
+};
+const MEMS = {swiggy_one:"Swiggy One",zepto_pass:"Zepto Pass",prime:"Prime",zomato_gold:"Zomato Gold"};
+const KEY = "quickcompare-v1";
+const clone = o => JSON.parse(JSON.stringify(o));
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) } catch(e) {}
+if (!S || !Array.isArray(S.apps)) S = clone(SAMPLE);
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(()=>{ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} }, 300) }
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rs = n => "₹" + (Math.round(n*100)/100).toLocaleString("en-IN",{maximumFractionDigits:2});
+const r0 = n => "₹" + Math.round(n).toLocaleString("en-IN");
+const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n };
+const uid = p => p + Math.random().toString(36).slice(2,7);
+const appById = id => S.apps.find(a => a.id === id);
+const cardById = id => S.cards.find(c => c.id === id);
+
+/* ---------------- engine ---------------- */
+function fees(app, itemTotal){
+  const f = app.fees, out = [];
+  const waived = f.mem && S.memberships[f.mem];
+  const free = num(f.freeAbove) > 0 && itemTotal >= num(f.freeAbove);
+  if (num(f.delivery) && !waived && !free) out.push(["Delivery fee", num(f.delivery)]);
+  if (num(f.handling)) out.push(["Handling fee", num(f.handling)]);
+  if (num(f.platform)) out.push(["Platform fee", num(f.platform)]);
+  if (num(f.small) && num(f.smallBelow) && itemTotal < num(f.smallBelow)) out.push(["Small-cart fee", num(f.small)]);
+  if (num(f.delivery) && (waived || free)) out.push([waived ? `Delivery free (${MEMS[f.mem]})` : "Delivery free", 0]);
+  return out;
+}
+function offerAmt(o, base){
+  let a = o.type === "pct" ? base * num(o.value) / 100 : num(o.value);
+  if (num(o.max) > 0) a = Math.min(a, num(o.max));
+  return Math.max(0, Math.min(a, base));
+}
+function bestPerGroup(list){
+  const g = {};
+  for (const [o,a] of list) if (a > 0 && (!g[o.group] || a > g[o.group][1])) g[o.group] = [o,a];
+  return Object.values(g);
+}
+function quote(app, lines, card){
+  const itemTotal = lines.reduce((s,l)=>s + l.price*l.qty, 0);
+  const count = lines.reduce((s,l)=>s + l.qty, 0);
+  const fl = fees(app, itemTotal), feeTotal = fl.reduce((s,f)=>s+f[1],0);
+  const ok = S.offers.filter(o => o.on && (o.app === "any" || o.app === app.id) && (!o.card || o.card === card.id)
+    && itemTotal >= num(o.minOrder) && count >= num(o.minItems));
+  const instant = [], cash = [];
+  for (const [o,a] of bestPerGroup(ok.filter(o=>!o.card).map(o=>[o, offerAmt(o,itemTotal)])))
+    (o.real === "cashback" ? cash : instant).push([o.desc, a]);
+  const afterCoupons = itemTotal + feeTotal - instant.reduce((s,x)=>s+x[1],0);
+  for (const [o,a] of bestPerGroup(ok.filter(o=>o.card).map(o=>[o, offerAmt(o,Math.max(0,afterCoupons))])))
+    (o.real === "cashback" ? cash : instant).push([o.desc, a]);
+  const payNow = itemTotal + feeTotal - instant.reduce((s,x)=>s+x[1],0);
+  const rate = card.rates[app.id] !== undefined && card.rates[app.id] !== "" ? num(card.rates[app.id]) : num(card.base);
+  if (rate > 0 && payNow > 0){
+    let rw = payNow * rate / 100;
+    if (num(card.cap) > 0) rw = Math.min(rw, num(card.cap));
+    if (rw > 0) cash.push([`${card.name} rewards (${rate}%)`, rw]);
+  }
+  const cb = cash.reduce((s,x)=>s+x[1],0);
+  return {app, card, lines, itemTotal, fees:fl, instant, cash, payNow, cb, eff: payNow - cb, missing:[]};
+}
+function activeItems(){ return S.items.filter(i => i.name.trim() && num(i.qty) > 0) }
+function activeApps(){ return S.apps.filter(a => a.on && (!num(S.maxEta) || num(a.eta) <= num(S.maxEta))) }
+function ownedCards(){ return S.cards.filter(c => c.own) }
+function priceOf(item, app){ const p = item.prices[app.id]; return p === undefined || p === "" || p === null ? null : num(p) }
+
+function rankSingle(){
+  const items = activeItems(), out = [];
+  for (const app of activeApps()){
+    const lines = [], missing = [];
+    for (const it of items){ const p = priceOf(it, app); p === null ? missing.push(it.name) : lines.push({name:it.name, price:p, qty:num(it.qty)}) }
+    if (!lines.length) continue;
+    let qs = ownedCards().map(c => Object.assign(quote(app, lines, c), {missing}));
+    qs.sort((a,b)=>a.eff-b.eff);
+    if (S.bestOnly) qs = qs.slice(0,1);
+    out.push(...qs);
+  }
+  return out.sort((a,b)=> a.missing.length - b.missing.length || a.eff - b.eff);
+}
+function bestSplit(maxOrders=2){
+  const items = activeItems(), n = items.length;
+  if (!n || n > 12) return null;
+  const full = (1<<n)-1, cards = ownedCards();
+  if (!cards.length) return null;
+  const tables = activeApps().map(app => {
+    let avail = 0; items.forEach((it,i)=>{ if (priceOf(it,app) !== null) avail |= 1<<i });
+    const t = new Map();
+    for (let sub = avail; sub; sub = (sub-1) & avail){
+      const lines = items.map((it,i)=> (sub>>i)&1 ? {name:it.name, price:priceOf(it,app), qty:num(it.qty)} : null).filter(Boolean);
+      let best = null; for (const c of cards){ const q = quote(app, lines, c); if (!best || q.eff < best.eff) best = q }
+      t.set(sub, best);
+    }
+    return t;
+  });
+  let dp = new Map([["0|0", {c:0, orders:[]}]]);
+  for (const t of tables){
+    const nx = new Map(dp);
+    for (const [k,v] of dp){
+      const [mask, used] = k.split("|").map(Number);
+      if (used >= maxOrders) continue;
+      const free = full & ~mask;
+      for (const [sub,q] of t){
+        if ((sub & free) !== sub) continue;
+        const key = (mask|sub) + "|" + (used+1), val = v.c + q.eff;
+        if (!nx.has(key) || val < nx.get(key).c) nx.set(key, {c:val, orders:[...v.orders, q]});
+      }
+    }
+    dp = nx;
+  }
+  let best = null;
+  for (const [k,v] of dp) if (Number(k.split("|")[0]) === full && (!best || v.c < best.c)) best = v;
+  return best;
+}
+
+/* ---------------- views ---------------- */
+function deepLink(app, q){ return app.link ? app.link.replace("{q}", encodeURIComponent(q)) : null }
+function linksFor(q){
+  return `<div class="links">` + q.lines.map(l => { const u = deepLink(q.app, l.name);
+    return u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l.name)} ×${l.qty} ↗</a>` : "" }).join("") + `</div>`;
+}
+function breakdown(q){
+  let h = `<div class="bd"><div class="ln"><span>Items</span><span>${rs(q.itemTotal)}</span></div>`;
+  for (const [k,v] of q.fees) h += `<div class="ln"><span>${esc(k)}</span><span>${v ? "+ "+rs(v) : "₹0"}</span></div>`;
+  for (const [k,v] of q.instant) h += `<div class="ln save"><span>${esc(k)}</span><span>− ${rs(v)}</span></div>`;
+  h += `<div class="ln tot"><span>Pay now with ${esc(q.card.name)}</span><span>${rs(q.payNow)}</span></div>`;
+  for (const [k,v] of q.cash) h += `<div class="ln cb"><span>${esc(k)} (later)</span><span>− ${rs(v)}</span></div>`;
+  h += `<div class="ln tot"><span>Real cost</span><span>${rs(q.eff)}</span></div>`;
+  if (q.missing.length) h += `<div class="ln"><span class="miss">Not on ${esc(q.app.label)}: ${esc(q.missing.join(", "))}</span></div>`;
+  return h + linksFor(q) + `</div>`;
+}
+function renderResults(){
+  const box = $("#results");
+  if (!activeItems().length){ box.innerHTML = `<div class="empty">Add an item to your basket to see results.</div>`; return }
+  if (!ownedCards().length){ box.innerHTML = `<div class="empty">Tick at least one card or UPI under My cards.</div>`; return }
+  const ranked = rankSingle();
+  if (!ranked.length){ box.innerHTML = `<div class="empty">No selected app has these items within ${esc(S.maxEta)} minutes. Increase the max wait or switch on more apps.</div>`; return }
+  const best = ranked[0], complete = ranked.filter(q=>!q.missing.length);
+  const worst = complete.length ? Math.max(...complete.map(q=>q.eff)) : best.eff;
+  let h = `<div class="verdict">
+    <span class="label" style="color:inherit;opacity:.85">Best single order</span>
+    <span class="big">${r0(best.eff)}</span>
+    <span><b>${esc(best.app.label)}</b>, pay with <b>${esc(best.card.name)}</b></span>
+    <span class="sub">Pay ${rs(best.payNow)} now${best.cb ? `, get ${rs(best.cb)} back later` : ""}. ${worst - best.eff >= 1 ? `${r0(worst - best.eff)} less than the most expensive app.` : ""}</span>
+    ${best.missing.length ? `<span class="sub">Missing: ${esc(best.missing.join(", "))}</span>` : ""}
+  </div>`;
+  const sp = bestSplit(2);
+  if (sp && sp.orders.length > 1 && sp.c < best.eff - 1){
+    h += `<div class="split"><span><b>Split it and save ${r0(best.eff - sp.c)} more:</b> ${r0(sp.c)} across two orders</span>` +
+      sp.orders.map(o => `<span>${esc(o.app.label)} with ${esc(o.card.name)}: ${esc(o.lines.map(l=>l.name).join(", "))} = ${r0(o.eff)}</span>`).join("") + `</div>`;
+  }
+  h += `<div class="label">All options. Tap one for the breakdown and app links.</div>`;
+  ranked.forEach((q,i) => {
+    h += `<details class="opt"${i===0?" open":""}><summary><span class="rank">${i+1}</span>
+      <span class="who"><b>${esc(q.app.label)} · ${esc(q.card.name)}</b>
+      <small>Pay ${rs(q.payNow)}${q.cb ? ` · ${rs(q.cb)} back` : ""} · ~${esc(q.app.eta)} min</small>${q.missing.length ? `<span class="miss">${q.missing.length} missing</span>` : ""}</span>
+      <span class="eff">${r0(q.eff)}<small>real cost</small></span></summary>${breakdown(q)}</details>`;
+  });
+  h += `<p class="note">Swiggy, Instamart and Zomato can also take orders through the Claude or ChatGPT connectors they provide. Other apps open in a new tab for you to check out.</p>`;
+  box.innerHTML = h;
+}
+
+function renderChips(){
+  $("#appChips").innerHTML = S.apps.map(a => `<label class="chip" for="app-${a.id}"><input type="checkbox" id="app-${a.id}" data-app="${a.id}" ${a.on?"checked":""}>${esc(a.label)}</label>`).join("");
+  $("#memChips").innerHTML = `<span class="label">I have</span>` + Object.entries(MEMS).map(([k,v]) => `<label class="chip" for="mem-${k}"><input type="checkbox" id="mem-${k}" data-mem="${k}" ${S.memberships[k]?"checked":""}>${v}</label>`).join("");
+  $("#maxEta").value = S.maxEta; $("#bestOnly").checked = S.bestOnly;
+}
+function renderPriceTable(){
+  const apps = S.apps.filter(a=>a.on);
+  let h = `<thead><tr><th>Item</th><th class="num">Qty</th>${apps.map(a=>`<th class="num">${esc(a.label)}</th>`).join("")}<th></th></tr></thead><tbody>`;
+  S.items.forEach((it, i) => {
+    h += `<tr><td><input class="name" id="item-${i}" data-i="${i}" data-f="name" value="${esc(it.name)}" aria-label="Item name"></td>
+      <td class="num"><input type="number" id="qty-${i}" data-i="${i}" data-f="qty" min="1" step="1" value="${esc(it.qty)}" style="width:54px" aria-label="Quantity"></td>
+      ${apps.map(a=>`<td class="num"><input type="number" class="price" id="p-${i}-${a.id}" data-i="${i}" data-app="${a.id}" min="0" step="1" value="${it.prices[a.id] ?? ""}" aria-label="${esc(a.label)} price for ${esc(it.name)}"></td>`).join("")}
+      <td><button class="ghost" data-del-item="${i}" aria-label="Remove ${esc(it.name)}">✕</button></td></tr>`;
+  });
+  $("#priceTable").innerHTML = h + "</tbody>";
+  markCheapest();
+}
+function markCheapest(){
+  S.items.forEach((it,i) => {
+    const vals = S.apps.filter(a=>a.on).map(a=>[a.id, priceOf(it,a)]).filter(x=>x[1]!==null);
+    const min = Math.min(...vals.map(x=>x[1]));
+    S.apps.forEach(a => { const el = document.getElementById(`p-${i}-${a.id}`); if (el) el.classList.toggle("best", vals.length > 1 && priceOf(it,a) === min) });
+  });
+}
+
+function renderCards(){
+  const apps = S.apps;
+  let h = `<p class="note">Tick the cards you own. "Everywhere" is the card's normal reward rate. Fill an app column only where the card earns a different rate there. Cap is the most reward you get on one order (0 means no cap).</p>
+  <div class="scroll"><table><thead><tr><th>Own</th><th>Card / method</th><th class="num">Everywhere %</th>${apps.map(a=>`<th class="num">${esc(a.label)} %</th>`).join("")}<th class="num">Cap ₹</th><th></th></tr></thead><tbody>`;
+  S.cards.forEach((c,i) => {
+    h += `<tr><td><input type="checkbox" id="c-own-${i}" data-c="${i}" data-f="own" ${c.own?"checked":""} aria-label="I own ${esc(c.name)}"></td>
+      <td><input id="c-name-${i}" data-c="${i}" data-f="name" value="${esc(c.name)}" aria-label="Card name"></td>
+      <td class="num"><input type="number" id="c-base-${i}" data-c="${i}" data-f="base" step="0.5" min="0" value="${esc(c.base)}" aria-label="Default reward %"></td>
+      ${apps.map(a=>`<td class="num"><input type="number" id="c-r-${i}-${a.id}" data-c="${i}" data-rate="${a.id}" step="0.5" min="0" value="${c.rates[a.id] ?? ""}" placeholder="–" aria-label="${esc(c.name)} reward % on ${esc(a.label)}"></td>`).join("")}
+      <td class="num"><input type="number" id="c-cap-${i}" data-c="${i}" data-f="cap" min="0" value="${esc(c.cap)}" aria-label="Reward cap"></td>
+      <td><button class="ghost" data-del-card="${i}" aria-label="Remove ${esc(c.name)}">✕</button></td></tr>`;
+  });
+  h += `</tbody></table></div><div class="row"><button id="addCard">Add card or payment method</button></div>`;
+  $("#tab-cards").innerHTML = h;
+}
+function renderOffers(){
+  const appOpts = sel => `<option value="any"${sel==="any"?" selected":""}>Any app</option>` + S.apps.map(a=>`<option value="${a.id}"${sel===a.id?" selected":""}>${esc(a.label)}</option>`).join("");
+  const cardOpts = sel => `<option value=""${!sel?" selected":""}>Any payment</option>` + S.cards.map(c=>`<option value="${c.id}"${sel===c.id?" selected":""}>${esc(c.name)}</option>`).join("");
+  const opt = (v, cur, label) => `<option value="${v}"${v===cur?" selected":""}>${label}</option>`;
+  let h = `<p class="note">An order gets the best <b>coupon</b> and the best <b>bank</b> offer. Offers in the same group don't stack. Bank offers are worked out on the amount left after the coupon. Cashback lowers your real cost but not what you pay now.</p>
+  <div class="scroll"><table><thead><tr><th>On</th><th>Offer</th><th>App</th><th>Pay with</th><th>Kind</th><th class="num">Value</th><th class="num">Max ₹</th><th class="num">Min order ₹</th><th class="num">Min items</th><th>Credited</th><th>Group</th><th></th></tr></thead><tbody>`;
+  S.offers.forEach((o,i) => {
+    h += `<tr><td><input type="checkbox" id="o-on-${i}" data-o="${i}" data-f="on" ${o.on?"checked":""} aria-label="Offer on"></td>
+      <td><input id="o-desc-${i}" data-o="${i}" data-f="desc" value="${esc(o.desc)}" style="min-width:190px" aria-label="Offer description"></td>
+      <td><select id="o-app-${i}" data-o="${i}" data-f="app" aria-label="App">${appOpts(o.app)}</select></td>
+      <td><select id="o-card-${i}" data-o="${i}" data-f="card" aria-label="Payment">${cardOpts(o.card)}</select></td>
+      <td><select id="o-type-${i}" data-o="${i}" data-f="type" aria-label="Kind">${opt("pct",o.type,"% off")}${opt("flat",o.type,"₹ off")}</select></td>
+      <td class="num"><input type="number" id="o-val-${i}" data-o="${i}" data-f="value" min="0" value="${esc(o.value)}" aria-label="Value"></td>
+      <td class="num"><input type="number" id="o-max-${i}" data-o="${i}" data-f="max" min="0" value="${esc(o.max)}" aria-label="Max discount"></td>
+      <td class="num"><input type="number" id="o-mo-${i}" data-o="${i}" data-f="minOrder" min="0" value="${esc(o.minOrder)}" aria-label="Minimum order"></td>
+      <td class="num"><input type="number" id="o-mi-${i}" data-o="${i}" data-f="minItems" min="0" value="${esc(o.minItems)}" aria-label="Minimum items"></td>
+      <td><select id="o-real-${i}" data-o="${i}" data-f="real" aria-label="Credited">${opt("instant",o.real,"Off the bill")}${opt("cashback",o.real,"Cashback later")}</select></td>
+      <td><select id="o-grp-${i}" data-o="${i}" data-f="group" aria-label="Group">${opt("coupon",o.group,"Coupon")}${opt("bank",o.group,"Bank")}</select></td>
+      <td><button class="ghost" data-del-offer="${i}" aria-label="Remove offer">✕</button></td></tr>`;
+  });
+  h += `</tbody></table></div><div class="row"><button id="addOffer">Add offer</button></div>`;
+  $("#tab-offers").innerHTML = h;
+}
+function renderFees(){
+  const memOpts = cur => `<option value=""${!cur?" selected":""}>None</option>` + Object.entries(MEMS).map(([k,v])=>`<option value="${k}"${cur===k?" selected":""}>${v}</option>`).join("");
+  let h = `<p class="note">Fees vary by city, time and cart size. Copy them from the app's bill if you want exact numbers. A membership here waives delivery when you've ticked it under "I have".</p>
+  <div class="scroll"><table><thead><tr><th>App</th><th class="num">Delivery ₹</th><th class="num">Free above ₹</th><th class="num">Handling ₹</th><th class="num">Platform ₹</th><th class="num">Small-cart ₹</th><th class="num">If below ₹</th><th>Waived by</th><th class="num">ETA min</th></tr></thead><tbody>`;
+  S.apps.forEach((a,i) => {
+    const f = k => `<td class="num"><input type="number" id="f-${k}-${i}" data-a="${i}" data-fee="${k}" min="0" value="${esc(a.fees[k])}" aria-label="${esc(a.label)} ${k}"></td>`;
+    h += `<tr><td>${esc(a.label)}</td>${f("delivery")}${f("freeAbove")}${f("handling")}${f("platform")}${f("small")}${f("smallBelow")}
+      <td><select id="f-mem-${i}" data-a="${i}" data-fee="mem" aria-label="${esc(a.label)} membership">${memOpts(a.fees.mem)}</select></td>
+      <td class="num"><input type="number" id="f-eta-${i}" data-a="${i}" data-f="eta" min="1" value="${esc(a.eta)}" aria-label="${esc(a.label)} delivery minutes"></td></tr>`;
+  });
+  $("#tab-fees").innerHTML = h + `</tbody></table></div>`;
+}
+function renderAll(){ renderChips(); renderPriceTable(); renderCards(); renderOffers(); renderFees(); $("#dump").value = JSON.stringify(S); renderResults() }
+function changed(){ save(); renderResults(); $("#dump").value = JSON.stringify(S) }
+
+/* ---------------- events ---------------- */
+document.addEventListener("input", e => {
+  const t = e.target, d = t.dataset;
+  if (t.id === "maxEta"){ S.maxEta = num(t.value) }
+  else if (t.id === "bestOnly"){ S.bestOnly = t.checked }
+  else if (d.mem){ S.memberships[d.mem] = t.checked }
+  else if (d.app && d.i === undefined){ appById(d.app).on = t.checked; renderPriceTable() }
+  else if (d.i !== undefined){
+    const it = S.items[+d.i];
+    if (d.app) it.prices[d.app] = t.value === "" ? "" : num(t.value);
+    else it[d.f] = d.f === "qty" ? num(t.value) : t.value;
+    markCheapest();
+  }
+  else if (d.c !== undefined){
+    const c = S.cards[+d.c];
+    if (d.rate) { if (t.value === "") delete c.rates[d.rate]; else c.rates[d.rate] = num(t.value) }
+    else if (d.f === "own") c.own = t.checked;
+    else if (d.f === "name") { c.name = t.value }
+    else c[d.f] = num(t.value);
+  }
+  else if (d.o !== undefined){
+    const o = S.offers[+d.o];
+    o[d.f] = d.f === "on" ? t.checked : ["value","max","minOrder","minItems"].includes(d.f) ? num(t.value) : t.value;
+  }
+  else if (d.a !== undefined){
+    const a = S.apps[+d.a];
+    if (d.fee) a.fees[d.fee] = d.fee === "mem" ? t.value : num(t.value); else a.eta = num(t.value);
+  }
+  else return;
+  changed();
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  const d = t.dataset;
+  if (t.id === "addItem"){ S.items.push({name:"",qty:1,prices:{}}); renderPriceTable(); changed(); document.getElementById(`item-${S.items.length-1}`)?.focus() }
+  else if (d.delItem !== undefined){ S.items.splice(+d.delItem,1); renderPriceTable(); changed() }
+  else if (t.id === "addCard"){ S.cards.push({id:uid("card_"),name:"New card",own:true,base:1,cap:0,rates:{}}); renderCards(); renderOffers(); changed() }
+  else if (d.delCard !== undefined){ const id = S.cards[+d.delCard].id; S.cards.splice(+d.delCard,1); S.offers.forEach(o=>{ if(o.card===id) o.on=false }); renderCards(); renderOffers(); changed() }
+  else if (t.id === "addOffer"){ S.offers.push({on:true,desc:"New offer",app:"any",card:"",type:"pct",value:10,max:0,minOrder:0,minItems:0,real:"instant",group:"coupon"}); renderOffers(); changed() }
+  else if (d.delOffer !== undefined){ S.offers.splice(+d.delOffer,1); renderOffers(); changed() }
+  else if (d.tab){
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", b === t));
+    document.querySelectorAll(".tabpane").forEach(p => p.hidden = p.id !== "tab-" + d.tab);
+  }
+  else if (t.id === "copyDump"){
+    const ta = $("#dump");
+    navigator.clipboard?.writeText(ta.value).then(()=>{$("#dumpMsg").textContent="Copied."}).catch(()=>{ ta.select(); $("#dumpMsg").textContent="Text selected. Copy it with your keyboard." })
+      ?? (ta.select(), $("#dumpMsg").textContent="Text selected. Copy it with your keyboard.");
+  }
+  else if (t.id === "loadDump"){
+    try { const n = JSON.parse($("#dump").value); if (!Array.isArray(n.apps) || !Array.isArray(n.items)) throw 0; S = n; save(); renderAll(); $("#dumpMsg").textContent = "Loaded." }
+    catch(err){ $("#dumpMsg").textContent = "That text isn't a QuickCompare backup. Paste the full text you copied." }
+  }
+  else if (t.id === "reset"){ S = clone(SAMPLE); save(); renderAll(); $("#dumpMsg").textContent = "Reset to the example data." }
+});
+renderAll();
+</script>
