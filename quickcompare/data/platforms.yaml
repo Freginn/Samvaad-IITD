@@ -1,0 +1,58 @@
+# Fees and integration per platform.
+# NUMBERS ARE ILLUSTRATIVE. Fees change by city, time of day and cart size,
+# so a live connector should overwrite them with the fees from the actual cart.
+#
+# connector:  mock          -> sample catalog (data/sample_catalog.json)
+#             swiggy_mcp    -> official Swiggy MCP server (search, cart, order)
+#             zomato_mcp    -> official Zomato MCP server (food)
+#             manual        -> no API: you type the price, app opens deep link to order
+
+platforms:
+  blinkit:
+    label: Blinkit
+    category: grocery
+    connector: mock
+    deep_link: "https://blinkit.com/s/?q={q}"
+    fees: {delivery_fee: 30, free_delivery_above: 199, handling_fee: 9, small_cart_fee: 20, small_cart_below: 99}
+  zepto:
+    label: Zepto
+    category: grocery
+    connector: mock
+    deep_link: "https://www.zeptonow.com/search?query={q}"
+    fees: {delivery_fee: 30, free_delivery_above: 199, handling_fee: 12, small_cart_fee: 25, small_cart_below: 99, membership: zepto_pass}
+  instamart:
+    label: Swiggy Instamart
+    category: grocery
+    connector: mock          # switch to swiggy_mcp once you have access
+    deep_link: "https://www.swiggy.com/instamart/search?query={q}"
+    fees: {delivery_fee: 30, free_delivery_above: 199, handling_fee: 10, small_cart_fee: 30, small_cart_below: 99, membership: swiggy_one}
+  amazon_now:
+    label: Amazon Now
+    category: grocery
+    connector: mock
+    deep_link: "https://www.amazon.in/s?k={q}&i=nowstore"
+    fees: {delivery_fee: 25, free_delivery_above: 149, membership: prime}
+  flipkart_minutes:
+    label: Flipkart Minutes
+    category: grocery
+    connector: mock
+    deep_link: "https://www.flipkart.com/search?q={q}&marketplace=HYPERLOCAL"
+    fees: {delivery_fee: 25, free_delivery_above: 99, handling_fee: 9}
+  bigbasket:
+    label: BigBasket (BB Now)
+    category: grocery
+    connector: mock
+    deep_link: "https://www.bigbasket.com/ps/?q={q}"
+    fees: {delivery_fee: 30, free_delivery_above: 199, handling_fee: 5}
+  swiggy_food:
+    label: Swiggy Food
+    category: food
+    connector: manual        # switch to swiggy_mcp once you have access
+    deep_link: "https://www.swiggy.com/search?query={q}"
+    fees: {delivery_fee: 40, platform_fee: 10, membership: swiggy_one}
+  zomato:
+    label: Zomato
+    category: food
+    connector: manual        # switch to zomato_mcp once you have access
+    deep_link: "https://www.zomato.com/search?q={q}"
+    fees: {delivery_fee: 40, platform_fee: 12, membership: zomato_gold}

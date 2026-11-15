@@ -1,0 +1,70 @@
+# Offers. ILLUSTRATIVE EXAMPLES — edit to match what the apps show you today.
+#
+# type:         percent | flat
+# realization:  instant (off the bill) | cashback (credited later)
+# group:        offers in the same group don't stack; the best one wins.
+#               Typical checkout = one "coupon" + one "bank" offer.
+# value_factor: what ₹1 of this cashback is worth to you (1.0 = cash).
+
+offers:
+  # --- Your examples ---
+  - id: amzn_now_6items
+    description: "Amazon Now: ₹50 cashback on 6+ items"
+    platforms: [amazon_now]
+    type: flat
+    value: 50
+    min_items: 6
+    realization: cashback
+    group: coupon
+  - id: amzn_now_swiggy_hdfc
+    description: "Amazon Now: 5% off with Swiggy HDFC card"
+    platforms: [amazon_now]
+    payment_method: swiggy_hdfc
+    type: percent
+    value: 5
+    max_discount: 100
+    group: bank
+  - id: instamart_hdfc_10
+    description: "Instamart: 10% off with HDFC credit cards"
+    platforms: [instamart]
+    payment_method: swiggy_hdfc
+    type: percent
+    value: 10
+    max_discount: 150
+    min_order: 299
+    group: bank
+
+  # --- More examples of the kinds of offers the engine handles ---
+  - id: blinkit_flat75
+    description: "Blinkit: ₹75 off above ₹599"
+    platforms: [blinkit]
+    type: flat
+    value: 75
+    min_order: 599
+    group: coupon
+  - id: zepto_sbi_10
+    description: "Zepto: 10% off with SBI card (max ₹100)"
+    platforms: [zepto]
+    payment_method: sbi_cashback
+    type: percent
+    value: 10
+    max_discount: 100
+    min_order: 399
+    group: bank
+  - id: flipkart_minutes_axis
+    description: "Flipkart Minutes: 5% instant off with Flipkart Axis"
+    platforms: [flipkart_minutes]
+    payment_method: flipkart_axis
+    type: percent
+    value: 5
+    max_discount: 75
+    group: bank
+  - id: bb_upi_cb
+    description: "BigBasket: ₹25 cashback on UPI"
+    platforms: [bigbasket]
+    payment_method: upi
+    type: flat
+    value: 25
+    min_order: 249
+    realization: cashback
+    group: bank
